@@ -20,7 +20,7 @@ contract EtherbotsCore is  EtherbotsBase {
     // Set in case the core contract is broken and an upgrade is required
     address public newContractAddress;
 
-    function EtherbotCore() public {
+    function EtherbotsCore() public {
         // Starts paused.
         paused = true;
         owner = msg.sender;

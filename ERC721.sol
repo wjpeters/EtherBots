@@ -3,120 +3,60 @@ import "./Base.sol";
 
 // This contract implements both the original ERC-721 standard and
 // the proposed 'deed' standard of 841
-// I don't know which standard will eventually be adopted - support both
+// I don't know which standard will eventually be adopted - support both for now
 // TODO: there must be a better way of expressing all this
-// TODO: add ERC165 or ERC820 support (won't take long)
+// TODO: add proper ERC165 or ERC820 support (won't take long)
 
 /// @title Interface for contracts conforming to ERC-721: Deed Standard
 /// @author William Entriken (https://phor.net), et. al.
-/// @dev Specification at https://github.com/ethereum/eips/XXXFinalUrlXXX
-contract ERC is EtherbotsBase {
+/// @dev Specification at https://github.com/ethereum/eips/841
+/// can read the comments there
+contract ERC721 {
 
-    // COMPLIANCE WITH ERC-165 (DRAFT) /////////////////////////////////////////
+    // COMPLIANCE WITH ERC-165 (DRAFT)
 
     /// @dev ERC-165 (draft) interface signature for itself
-    // bytes4 internal constant INTERFACE_SIGNATURE_ERC165 = // 0x01ffc9a7
-    //     bytes4(keccak256('supportsInterface(bytes4)'));
+    bytes4 internal constant INTERFACE_SIGNATURE_ERC165 =
+        bytes4(keccak256('supportsInterface(bytes4)'));
 
     /// @dev ERC-165 (draft) interface signature for ERC721
-    // bytes4 internal constant INTERFACE_SIGNATURE_ERC721 = // 0xda671b9b
-    //     bytes4(keccak256('ownerOf(uint256)')) ^
-    //     bytes4(keccak256('countOfDeeds()')) ^
-    //     bytes4(keccak256('countOfDeedsByOwner(address)')) ^
-    //     bytes4(keccak256('deedOfOwnerByIndex(address,uint256)')) ^
-    //     bytes4(keccak256('approve(address,uint256)')) ^
-    //     bytes4(keccak256('takeOwnership(uint256)'));
+    bytes4 internal constant INTERFACE_SIGNATURE_ERC721 =
+         bytes4(keccak256('ownerOf(uint256)')) ^
+         bytes4(keccak256('countOfDeeds()')) ^
+         bytes4(keccak256('countOfDeedsByOwner(address)')) ^
+         bytes4(keccak256('deedOfOwnerByIndex(address,uint256)')) ^
+         bytes4(keccak256('approve(address,uint256)')) ^
+         bytes4(keccak256('takeOwnership(uint256)'));
 
-    /// @notice Query a contract to see if it supports a certain interface
-    /// @dev Returns `true` the interface is supported and `false` otherwise,
-    ///  returns `true` for INTERFACE_SIGNATURE_ERC165 and
-    ///  INTERFACE_SIGNATURE_ERC721, see ERC-165 for other interface signatures.
     function supportsInterface(bytes4 _interfaceID) external pure returns (bool);
 
     // PUBLIC QUERY FUNCTIONS //////////////////////////////////////////////////
 
-    /// @notice Find the owner of a deed
-    /// @param _deedId The identifier for a deed we are inspecting
-    /// @dev Deeds assigned to zero address are considered invalid, and
-    ///  queries about them do throw.
-    /// @return The non-zero address of the owner of deed `_deedId`, or `throw`
-    ///  if deed `_deedId` is not tracked by this contract
     function ownerOf(uint256 _deedId) public view returns (address _owner);
-
-    /// @notice Count deeds tracked by this contract
-    /// @return A count of valid deeds tracked by this contract, where each one of
-    ///  them has an assigned and queryable owner not equal to the zero address
     function countOfDeeds() external view returns (uint256 _count);
-
-    /// @notice Count all deeds assigned to an owner
-    /// @dev Throws if `_owner` is the zero address, representing invalid deeds.
-    /// @param _owner An address where we are interested in deeds owned by them
-    /// @return The number of deeds owned by `_owner`, possibly zero
     function countOfDeedsByOwner(address _owner) external view returns (uint256 _count);
-
-    /// @notice Enumerate deeds assigned to an owner
-    /// @dev Throws if `_index` >= `countOfDeedsByOwner(_owner)` or if
-    ///  `_owner` is the zero address, representing invalid deeds.
-    /// @param _owner An address where we are interested in deeds owned by them
-    /// @param _index A counter less than `countOfDeedsByOwner(_owner)`
-    /// @return The identifier for the `_index`th deed assigned to `_owner`,
-    ///   (sort order not specified)
     function deedOfOwnerByIndex(address _owner, uint256 _index) external view returns (uint256 _deedId);
 
     // TRANSFER MECHANISM //////////////////////////////////////////////////////
 
-    /// @dev This event emits when ownership of any deed changes by any
-    ///  mechanism. This event emits when deeds are created (`from` == 0) and
-    ///  destroyed (`to` == 0). Exception: during contract creation, any
-    ///  transfers may occur without emitting `Transfer`. At the time of any transfer,
-    ///  the "approved taker" is implicitly reset to the zero address.
     event Transfer(address indexed from, address indexed to, uint256 indexed deedId);
-
-    /// @dev The Approve event emits to log the "approved taker" for a deed -- whether
-    ///  set for the first time, reaffirmed by setting the same value, or setting to
-    ///  a new value. The "approved taker" is the zero address if nobody can take the
-    ///  deed now or it is an address if that address can call `takeOwnership` to attempt
-    ///  taking the deed. Any change to the "approved taker" for a deed SHALL cause
-    ///  Approve to emit. However, an exception, the Approve event will not emit when
-    ///  Transfer emits, this is because Transfer implicitly denotes the "approved taker"
-    ///  is reset to the zero address.
     event Approval(address indexed owner, address indexed approved, uint256 indexed deedId);
 
-    /// @notice Set the "approved taker" for your deed, or revoke approval by
-    ///  setting the zero address. You may `approve` any number of times while
-    ///  the deed is assigned to you, only the most recent approval matters. Emits
-    ///  an Approval event.
-    /// @dev Throws if `msg.sender` does not own deed `_deedId` or if `_to` ==
-    ///  `msg.sender` or if `_deedId` is not a valid deed.
-    /// @param _deedId The deed for which you are granting approval
     function approve(address _to, uint256 _deedId) external payable;
-
-    /// @notice Become owner of a deed for which you are currently approved
-    /// @dev Throws if `msg.sender` is not approved to become the owner of
-    ///  `deedId` or if `msg.sender` currently owns `_deedId` or if `_deedId is not a
-    ///  valid deed.
-    /// @param _deedId The deed that is being transferred
     function takeOwnership(uint256 _deedId) external payable;
 }
 
 /// @title Metadata extension to ERC-721 interface
 /// @author William Entriken (https://phor.net)
 /// @dev Specification at https://github.com/ethereum/eips/issues/XXXX
-contract ERC721Metadata is ERC {
+contract ERC721Metadata is ERC721 {
 
-    /// @dev ERC-165 (draft) interface signature for ERC721
-    // bytes4 internal constant INTERFACE_SIGNATURE_ERC721Metadata = // 0x2a786f11
-    //     bytes4(keccak256('name()')) ^
-    //     bytes4(keccak256('symbol()')) ^
-    //     bytes4(keccak256('deedUri(uint256)'));
+    bytes4 internal constant INTERFACE_SIGNATURE_ERC721Metadata =
+        bytes4(keccak256('name()')) ^
+        bytes4(keccak256('symbol()')) ^
+        bytes4(keccak256('deedUri(uint256)'));
 
-    /// @notice A descriptive name for a collection of deeds managed by this
-    ///  contract
-    /// @dev Wallets and exchanges MAY display this to the end user.
     function name() public pure returns (string n);
-
-    /// @notice An abbreviated name for deeds managed by this contract
-    /// @dev Wallets and exchanges MAY display this to the end user.
     function symbol() public pure returns (string s);
 
     /// @notice A distinct URI (RFC 3986) for a given token.
@@ -144,30 +84,26 @@ contract ERC721Metadata is ERC {
 contract ERC721Enumerable is ERC721Metadata {
 
     /// @dev ERC-165 (draft) interface signature for ERC721
-    // bytes4 internal constant INTERFACE_SIGNATURE_ERC721Enumerable = // 0xa5e86824
-    //     bytes4(keccak256('deedByIndex()')) ^
-    //     bytes4(keccak256('countOfOwners()')) ^
-    //     bytes4(keccak256('ownerByIndex(uint256)'));
+    bytes4 internal constant INTERFACE_SIGNATURE_ERC721Enumerable =
+        bytes4(keccak256('deedByIndex()')) ^
+        bytes4(keccak256('countOfOwners()')) ^
+        bytes4(keccak256('ownerByIndex(uint256)'));
 
-    /// @notice Enumerate active deeds
-    /// @dev Throws if `_index` >= `countOfDeeds()`
-    /// @param _index A counter less than `countOfDeeds()`
-    /// @return The identifier for the `_index`th deed, (sort order not
-    ///  specified)
     function deedByIndex(uint256 _index) external view returns (uint256 _deedId);
-
-    /// @notice Count of owners which own at least one deed
-    /// @return A count of the number of owners which own deeds
     function countOfOwners() external view returns (uint256 _count);
-
-    /// @notice Enumerate owners
-    /// @dev Throws if `_index` >= `countOfOwners()`
-    /// @param _index A counter less than `countOfOwners()`
-    /// @return The address of the `_index`th owner (sort order not specified)
     function ownerByIndex(uint256 _index) external view returns (address _owner);
 }
 
 contract ERC721Original {
+
+    bytes4 constant INTERFACE_SIGNATURE_ERC721Original =
+        bytes4(keccak256('totalSupply()')) ^
+        bytes4(keccak256('balanceOf(address)')) ^
+        bytes4(keccak256('ownerOf(uint256)')) ^
+        bytes4(keccak256('approve(address,uint256)')) ^
+        bytes4(keccak256('takeOwnership(uint256)')) ^
+        bytes4(keccak256('transfer(address,uint256)'));
+
     // Core functions
     function implementsERC721() public pure returns (bool);
     function totalSupply() public view returns (uint256 _totalSupply);
@@ -189,7 +125,7 @@ contract ERC721Original {
 }
 
 
-contract EtherbotsNFT is ERC721Enumerable, ERC721Original {
+contract EtherbotsNFT is EtherbotsBase, ERC721Enumerable, ERC721Original {
 
     function name() public pure returns (string _name) {
       return "Etherbots";
@@ -208,7 +144,7 @@ contract EtherbotsNFT is ERC721Enumerable, ERC721Original {
     /// @notice Returns the total number of deeds currently in existence.
     /// @dev Required for ERC-721 compliance.
     function countOfDeeds() external view returns (uint256) {
-        return totalSupply();
+        return parts.length;
     }
 
     /// internal function    which checks whether the token with id (_tokenId)
@@ -314,19 +250,6 @@ contract EtherbotsNFT is ERC721Enumerable, ERC721Original {
 
         Approval(msg.sender, _to, _tokenId);
     }
-    function _transferFrom(address _from, address _to, uint256 _tokenId) internal whenNotPaused {
-        // Safety checks to prevent accidents
-        require(_to != address(0));
-        require(_to != address(this));
-
-        // sender must be approved
-        require(partIndexToApproved[_tokenId] == msg.sender);
-        // from must currently own the token
-        require(_owns(_from, _tokenId));
-
-        // Reassign ownership (also clears pending approvals and emits Transfer event).
-        _transfer(_from, _to, _tokenId);
-    }
 
     // transfer the part with id (_tokenId) from (_from) to (_to)
     // (_to) must already be approved for this (_tokenId)
@@ -400,7 +323,7 @@ contract EtherbotsNFT is ERC721Enumerable, ERC721Original {
 
     /// returns a metadata URI
     // TODO: implement this.
-    function tokenMetadata(uint256 _tokenId, string _preferredTransport) external view returns (string infoUrl) {
+    function tokenMetadata(uint256 _tokenId) external view returns (string infoUrl) {
         return _metadata(_tokenId);
     }
 
@@ -412,7 +335,7 @@ contract EtherbotsNFT is ERC721Enumerable, ERC721Original {
 
         require(_approvedFor(msg.sender, _deedId));
 
-        _transferFrom(_from, msg.sender, _deedId);
+        _transfer(_from, msg.sender, _deedId);
     }
 
     // parts are stored sequentially

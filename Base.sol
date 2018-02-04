@@ -3,8 +3,8 @@ pragma solidity ^0.4.18;
 import "./AccessControl.sol";
 // import "./contracts/CratePreSale.sol";
 // Central collection of storage on which all other contracts depend.
-// Contains structs for parts and users and functions which dictate 
-// how they are transferred.
+// Contains structs for parts, users and functions which control their
+// transferrence.
 contract EtherbotsBase is EtherbotsPrivileges {
     /*** EVENTS ***/
 
@@ -28,7 +28,7 @@ contract EtherbotsBase is EtherbotsPrivileges {
         // the uint32 in the first space and access via bitshifting, but as there
         // is a lot of space, may as well go for readability.
         // Blueprint represents details of the part:
-        // [0] part type (representing, i.e., "turret"),
+        // [0] part type (representing, i.e., "turret") 1 = melee attack, 2 = body, 3 = turret, 4 = defence arm
         // [1] part ID (representing, i.e., "missile launcher")
         // [2] part level (experience),
         // [3] rarity status, (representing, i.e., "gold") -> 1 = common, 2 = shadow, 3 = gold
@@ -54,6 +54,7 @@ contract EtherbotsBase is EtherbotsPrivileges {
     /*** ~~~~~ROBOT PERKS~~~~~ ***/
     // PERK 1: ATTACK vs DEFENCE PERK CHOICE.
     // Choose
+    // PERK TWO ATTACK/ SHOOT, or DEFEND/DODGE
     // PERK 2: MECH vs ELEMENTAL PERK CHOICE ---
     // Choose steel and electric (Mech path), or water and fire (Elemetal path)
     // (... will the mechs win the war for Ethertopia? or will the androids
@@ -63,15 +64,12 @@ contract EtherbotsBase is EtherbotsPrivileges {
     // 2. the path of electricity: the deadly taser, the fearsome forcefield
     // 3. the path of water: high pressure water blasters have never been so cool
     // 4. the path of fire!: we will hunt you down, Aang...
-    // PERK 4: choose to enhance common parts, or special ones.
-    // common ones will make your everyday robot stronger...
-    // but a special enhancement can make your legendary Etherbot unstoppable.
 
 
     struct User {
         address userAddress;
         uint32 userExperience;
-        uint16[16] perks;
+        uint8[32] perks;
     }
 
     //Maintain an array of all users.
