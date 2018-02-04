@@ -3,8 +3,8 @@ pragma solidity ^0.4.18;
 import "./AccessControl.sol";
 // import "./contracts/CratePreSale.sol";
 // Central collection of storage on which all other contracts depend.
-// Contains structs for parts, users and functions which control their
-// transferrence.
+// Contains structs for parts and users and functions which dictate 
+// how they are transferred.
 contract EtherbotsBase is EtherbotsPrivileges {
     /*** EVENTS ***/
 
