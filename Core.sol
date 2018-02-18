@@ -1,8 +1,8 @@
 pragma solidity ^0.4.18;
 
-import "./Base.sol";
+import "./EtherbotsBattle.sol";
 
-contract EtherbotsCore is  EtherbotsBase {
+contract EtherbotsCore is EtherbotsBattle {
 
     // The structure of Etherbots is modelled on CryptoKitties for obvious reasons:
     // ease of implementation, tried + tested etc.
@@ -45,13 +45,13 @@ contract EtherbotsCore is  EtherbotsBase {
     } */
 
     // returns the part details
-    function getPart(uint256 _id) external view
-        returns (uint256 forgeTime, uint32[8] blueprint) {
-        Part storage part = parts[_id];
-        forgeTime = uint256(part.forgeTime);
-        blueprint = part.blueprint;
-        // I do not like implicit returns
-    }
+    // function getPart(uint256 _id) external view
+    //     returns (uint256 forgeTime, uint32[8] blueprint) {
+    //     Part storage part = parts[_id];
+    //     forgeTime = uint256(part.forgeTime);
+    //     blueprint = part.blueprint;
+    //     // I do not like implicit returns
+    // }
 
     /* // external contract addresses must be set before resumption
     function unpause() public onlyOwner whenPaused {
