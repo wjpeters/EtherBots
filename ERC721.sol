@@ -1,4 +1,6 @@
 pragma solidity ^0.4.18;
+
+import "./AccessControl.sol";
 import "./Base.sol";
 
 // This contract implements both the original ERC-721 standard and
@@ -17,16 +19,16 @@ contract ERC721 {
 
     /// @dev ERC-165 (draft) interface signature for itself
     bytes4 internal constant INTERFACE_SIGNATURE_ERC165 =
-        bytes4(keccak256('supportsInterface(bytes4)'));
+        bytes4(keccak256("supportsInterface(bytes4)"));
 
     /// @dev ERC-165 (draft) interface signature for ERC721
     bytes4 internal constant INTERFACE_SIGNATURE_ERC721 =
-         bytes4(keccak256('ownerOf(uint256)')) ^
-         bytes4(keccak256('countOfDeeds()')) ^
-         bytes4(keccak256('countOfDeedsByOwner(address)')) ^
-         bytes4(keccak256('deedOfOwnerByIndex(address,uint256)')) ^
-         bytes4(keccak256('approve(address,uint256)')) ^
-         bytes4(keccak256('takeOwnership(uint256)'));
+         bytes4(keccak256("ownerOf(uint256)")) ^
+         bytes4(keccak256("countOfDeeds()")) ^
+         bytes4(keccak256("countOfDeedsByOwner(address)")) ^
+         bytes4(keccak256("deedOfOwnerByIndex(address,uint256)")) ^
+         bytes4(keccak256("approve(address,uint256)")) ^
+         bytes4(keccak256("takeOwnership(uint256)"));
 
     function supportsInterface(bytes4 _interfaceID) external pure returns (bool);
 
@@ -52,9 +54,9 @@ contract ERC721 {
 contract ERC721Metadata is ERC721 {
 
     bytes4 internal constant INTERFACE_SIGNATURE_ERC721Metadata =
-        bytes4(keccak256('name()')) ^
-        bytes4(keccak256('symbol()')) ^
-        bytes4(keccak256('deedUri(uint256)'));
+        bytes4(keccak256("name()")) ^
+        bytes4(keccak256("symbol()")) ^
+        bytes4(keccak256("deedUri(uint256)"));
 
     function name() public pure returns (string n);
     function symbol() public pure returns (string s);
@@ -85,9 +87,9 @@ contract ERC721Enumerable is ERC721Metadata {
 
     /// @dev ERC-165 (draft) interface signature for ERC721
     bytes4 internal constant INTERFACE_SIGNATURE_ERC721Enumerable =
-        bytes4(keccak256('deedByIndex()')) ^
-        bytes4(keccak256('countOfOwners()')) ^
-        bytes4(keccak256('ownerByIndex(uint256)'));
+        bytes4(keccak256("deedByIndex()")) ^
+        bytes4(keccak256("countOfOwners()")) ^
+        bytes4(keccak256("ownerByIndex(uint256)"));
 
     function deedByIndex(uint256 _index) external view returns (uint256 _deedId);
     function countOfOwners() external view returns (uint256 _count);
@@ -97,12 +99,12 @@ contract ERC721Enumerable is ERC721Metadata {
 contract ERC721Original {
 
     bytes4 constant INTERFACE_SIGNATURE_ERC721Original =
-        bytes4(keccak256('totalSupply()')) ^
-        bytes4(keccak256('balanceOf(address)')) ^
-        bytes4(keccak256('ownerOf(uint256)')) ^
-        bytes4(keccak256('approve(address,uint256)')) ^
-        bytes4(keccak256('takeOwnership(uint256)')) ^
-        bytes4(keccak256('transfer(address,uint256)'));
+        bytes4(keccak256("totalSupply()")) ^
+        bytes4(keccak256("balanceOf(address)")) ^
+        bytes4(keccak256("ownerOf(uint256)")) ^
+        bytes4(keccak256("approve(address,uint256)")) ^
+        bytes4(keccak256("takeOwnership(uint256)")) ^
+        bytes4(keccak256("transfer(address,uint256)"));
 
     // Core functions
     function implementsERC721() public pure returns (bool);
@@ -111,7 +113,7 @@ contract ERC721Original {
     function ownerOf(uint _tokenId) public view returns (address _owner);
     function approve(address _to, uint _tokenId) external payable;
     function transferFrom(address _from, address _to, uint _tokenId) public;
-    function transfer(address _to, uint _tokenId) public;
+    function transfer(address _to, uint _tokenId) public payable;
 
     // Optional functions
     function name() public pure returns (string _name);
@@ -124,8 +126,21 @@ contract ERC721Original {
     event Approval(address indexed _owner, address indexed _approved, uint256 _tokenId);
 }
 
+contract ERC721AllImplementations is ERC721Original, ERC721Enumerable {
+
+}
+
 
 contract EtherbotsNFT is EtherbotsBase, ERC721Enumerable, ERC721Original {
+    function supportsInterface(bytes4 _interfaceID) external pure returns (bool) {
+        return (_interfaceID == ERC721Original.INTERFACE_SIGNATURE_ERC721Original) ||
+            (_interfaceID == ERC721.INTERFACE_SIGNATURE_ERC721) ||
+            (_interfaceID == ERC721Metadata.INTERFACE_SIGNATURE_ERC721Metadata) ||
+            (_interfaceID == ERC721Enumerable.INTERFACE_SIGNATURE_ERC721Enumerable);
+    }
+    function implementsERC721() public pure returns (bool) {
+        return true;
+    }
 
     function name() public pure returns (string _name) {
       return "Etherbots";
@@ -149,8 +164,23 @@ contract EtherbotsNFT is EtherbotsBase, ERC721Enumerable, ERC721Original {
 
     /// internal function    which checks whether the token with id (_tokenId)
     /// is owned by the (_claimant) address
-    function _owns(address _owner, uint256 _tokenId) internal view returns (bool) {
+    function owns(address _owner, uint256 _tokenId) public view returns (bool) {
         return partIndexToOwner[_tokenId] == _owner;
+    }
+
+    /// internal function    which checks whether the token with id (_tokenId)
+    /// is owned by the (_claimant) address
+    function ownsAll(address _owner, uint256[] _tokenIds) public view returns (bool) {
+        for (uint i = 0; i < _tokenIds.length; i++) {
+            if (!(partIndexToOwner[_tokenIds[i]] == _owner)) {
+                return true;
+            }
+        }
+        return true;
+    }
+
+    function _approve(uint256 _tokenId, address _approved) internal {
+        partIndexToApproved[_tokenId] = _approved;
     }
 
     function _approvedFor(address _newOwner, uint256 _tokenId) internal view returns (bool) {
@@ -171,54 +201,54 @@ contract EtherbotsNFT is EtherbotsBase, ERC721Enumerable, ERC721Original {
     }
 
     // transfers a part to another account
-    function transfer(address _to, uint256 _tokenId) public whenNotPaused {
+    function transfer(address _to, uint256 _tokenId) public whenNotPaused payable {
+        // payable for ERC721 --> don't actually send eth @_@
+        require(msg.value == 0);
 
         // Safety checks to prevent accidental transfers to common accounts
         require(_to != address(0));
         require(_to != address(this));
         // can't transfer parts to any of the auction contracts directly
-        for (uint i = 0; i < auctions.length; i++){
+        for (uint i = 0; i < auctions.length; i++) {
             require(_to != auctions[i]);
         }
         // can't transfer parts to any of the battle contracts directly
-        for (uint j = 0; j < battles.length; j++){
+        for (uint j = 0; j < battles.length; j++) {
             require(_to != battles[j]);
         }
 
         // Cannot send tokens you don't own
-        require(_owns(msg.sender, _tokenId));
+        require(owns(msg.sender, _tokenId));
 
         // perform state changes necessary for transfer
         _transfer(msg.sender, _to, _tokenId);
     }
-
     // transfers a part to another account
-    function transferMany(address _to, uint256[] _tokenIds) external whenNotPaused {
+    function transferAll(address _to, uint256[] _tokenIds) public whenNotPaused {
 
         // Safety checks to prevent accidental transfers to common accounts
         require(_to != address(0));
         require(_to != address(this));
         // can't transfer parts to any of the auction contracts directly
-        // require(_to != address(saleAuction));
-        for (uint i = 0; i < auctions.length; i++){
+        for (uint i = 0; i < auctions.length; i++) {
             require(_to != auctions[i]);
         }
         // can't transfer parts to any of the battle contracts directly
-        for (uint j = 0; j < auctions.length; j++){
+        for (uint j = 0; j < battles.length; j++) {
             require(_to != battles[j]);
         }
 
-        for (uint256 k = 0; k < _tokenIds.length; k++) {
-            uint256 _tokenId = _tokenIds[k];
+        // Cannot send tokens you don't own
+        require(ownsAll(msg.sender, _tokenIds));
 
-            // Cannot send tokens you don't own
-            require(_owns(msg.sender, _tokenId));
-
+        for (uint k = 0; k < _tokenIds.length; k++) {
             // perform state changes necessary for transfer
-            _transfer(msg.sender, _to, _tokenId);
+            _transfer(msg.sender, _to, _tokenIds[k]);
         }
 
+        
     }
+
 
     // approves the (_to) address to use the transferFrom function on the token with id (_tokenId)
     // if you want to clear all approvals, simply pass the zero address
@@ -227,7 +257,7 @@ contract EtherbotsNFT is EtherbotsBase, ERC721Enumerable, ERC721Original {
         require(msg.value == 0);
 
         // Cannot approve the transfer of tokens you don't own
-        require(_owns(msg.sender, _deedId));
+        require(owns(msg.sender, _deedId));
 
         // Store the approval (can only approve one at a time)
         partIndexToApproved[_deedId] = _to;
@@ -238,11 +268,11 @@ contract EtherbotsNFT is EtherbotsBase, ERC721Enumerable, ERC721Original {
     // approves many token ids
     function approveMany(address _to, uint256[] _tokenIds) external whenNotPaused {
 
-        for (uint i = 0; i < _tokenIds.length; i++){
+        for (uint i = 0; i < _tokenIds.length; i++) {
             uint _tokenId = _tokenIds[i];
 
             // Cannot approve the transfer of tokens you don't own
-            require(_owns(msg.sender, _tokenId));
+            require(owns(msg.sender, _tokenId));
 
             // Store the approval (can only approve one at a time)
             partIndexToApproved[_tokenId] = _to;
@@ -262,17 +292,17 @@ contract EtherbotsNFT is EtherbotsBase, ERC721Enumerable, ERC721Original {
         // sender must be approved
         require(partIndexToApproved[_tokenId] == msg.sender);
         // from must currently own the token
-        require(_owns(_from, _tokenId));
+        require(owns(_from, _tokenId));
 
         // Reassign ownership (also clears pending approvals and emits Transfer event).
         _transfer(_from, _to, _tokenId);
     }
 
     // returns the current owner of the token with id = _tokenId
-    function ownerOf(uint256 _tokenId) public view returns (address owner) {
-        owner = partIndexToOwner[_tokenId];
+    function ownerOf(uint256 _deedId) public view returns (address _owner) {
+        _owner = partIndexToOwner[_deedId];
         // must result false if index key not found
-        require(owner != address(0));
+        require(_owner != address(0));
     }
 
     // returns a dynamic array of the ids of all tokens which are owned by (_owner)
@@ -295,9 +325,55 @@ contract EtherbotsNFT is EtherbotsBase, ERC721Enumerable, ERC721Original {
         }
         return result; // will have 0 elements if tokenCount == 0
     }
+    
+    // Returns an array of all part structs owned by the user. Free to call.
+    function getPartsOfOwner(address _owner) external view returns(bytes24[]) {
+        uint256 tokenCount = balanceOf(_owner);
+        uint256 totalParts = totalSupply();
+
+        uint resultIndex = 0;
+        bytes24[] memory result = new bytes24[](tokenCount);
+        for (uint partId = 0; partId < totalParts; partId++) {
+            if (partIndexToOwner[partId] == _owner) {
+                Part storage p = parts[partId];
+
+                bytes24 b;
+                b = bytes24(p.tokenId);
+
+                b = b << 8;
+                b = b | bytes24(p.partType);
+
+                b = b << 8;
+                b = b | bytes24(p.partSubType);
+
+                b = b << 8;
+                b = b | bytes24(p.rarity);
+
+                b = b << 8;
+                b = b | bytes24(p.element);
+
+                b = b << 32;
+                b = b | bytes24(p.battlesLastDay);
+
+                b = b << 32;
+                b = b | bytes24(p.experience);
+
+                b = b << 32;
+                b = b | bytes24(p.forgeTime);
+
+                b = b << 32;
+                b = b | bytes24(p.battlesLastReset);
+
+                result[resultIndex] = b;
+                resultIndex++;
+            }
+        }
+
+        return result; // will have 0 elements if tokenCount == 0
+    }
 
     // have one internal function which lets us implement the divergent interfaces
-    function _metadata(uint256 _tokenId) internal returns(string){
+    function _metadata(uint256) internal pure returns(string) {
         return "";
     }
 
@@ -323,7 +399,7 @@ contract EtherbotsNFT is EtherbotsBase, ERC721Enumerable, ERC721Original {
 
     /// returns a metadata URI
     // TODO: implement this.
-    function tokenMetadata(uint256 _tokenId) external view returns (string infoUrl) {
+    function tokenMetadata(uint256 _tokenId) public view returns (string infoUrl) {
         return _metadata(_tokenId);
     }
 
@@ -386,6 +462,13 @@ contract EtherbotsNFT is EtherbotsBase, ERC721Enumerable, ERC721Original {
 
     function deedOfOwnerByIndex(address _owner, uint256 _index) external view returns (uint256 _deedId){
         return _tokenOfOwnerByIndex(_owner, _index);
+    }
+
+    // internal function to burn a part
+    function _burn(address _from, uint256 _tokenId) internal {
+        // can use internal transfer
+        // external transfer will throw on transfer(0, _tokenId)
+        _transfer(_from, address(0), _tokenId);
     }
 
 }
