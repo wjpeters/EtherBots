@@ -88,5 +88,11 @@ contract Pausable is Ownable {
 }
 
 contract EtherbotsPrivileges is Pausable {
-    event ContractUpgrade(address newContract);
+  event ContractUpgrade(address newContract);
+
+  modifier addressNotNil(address _address) {
+    require(_address != 0x0);
+    _;
+  }
+
 }
