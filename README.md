@@ -1,4 +1,4 @@
-# EtherBots
+# ETHERBOTS
 
 ![Etherbots Banner](https://cdn-images-1.medium.com/max/2000/1*ivh0196XMX4EYoPuGMOMZg.jpeg)
 
@@ -9,3 +9,5 @@ The contracts uploaded are in draft form and subject to change. In fact, we look
 We will continuing to update the contract, and then will will be opening up a feature bounty and bug bounty for the public. More details about these coming.
 
 Check out the beautiful site to go with this dApp at [etherbots.io](https://etherbots.io) and then join us on [discord](https://discord.gg/jbuYx9w), or [reddit](reddit.com/r/etherbots).
+
+All rights reserved, Fuel Bros Pty Ltd. 2018.
