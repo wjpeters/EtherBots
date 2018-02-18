@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.17;
 
 import "./AccessControl.sol";
 // import "./contracts/CratePreSale.sol";
@@ -6,43 +6,35 @@ import "./AccessControl.sol";
 // Contains structs for parts, users and functions which control their
 // transferrence.
 contract EtherbotsBase is EtherbotsPrivileges {
+
     /*** EVENTS ***/
 
     ///  Forge fires when a new part is created - 4 times when a crate is opened,
     /// and once when a battle takes place. Also has fires when
     /// parts are combined in the furnace.
-    event Forge(address owner, uint256 partID, uint32[8] blueprint);
+    event Forge(address owner, uint256 partID, Part part);
 
     ///  Transfer event as defined in ERC721.
     event Transfer(address from, address to, uint256 tokenId);
 
     /*** DATA TYPES ***/
-    ///  The main struct representation of a robot. Each robot in Etherbots is represented by four copies
+    ///  The main struct representation of a robot part. Each robot in Etherbots is represented by four copies
     ///  of this structure, one for each of the four parts comprising it:
     /// 1. Right Arm (Melee),
     /// 2. Left Arm (Defence),
     /// 3. Head (Turret),
     /// 4. Body.
-    struct Part {
-        // Could actually pull the whole part type + rarity + element into
-        // the uint32 in the first space and access via bitshifting, but as there
-        // is a lot of space, may as well go for readability.
-        // Blueprint represents details of the part:
-        // [0] part type (representing, i.e., "turret") 1 = melee attack, 2 = body, 3 = turret, 4 = defence arm
-        // [1] part ID (representing, i.e., "missile launcher")
-        // [2] part level (experience),
-        // [3] rarity status, (representing, i.e., "gold") -> 1 = common, 2 = shadow, 3 = gold
-        // [4] elemental type, (i.e., "water")
-        // // 1 - steel, 2 - electric, 3 - fire, 4 - water
-        // [5-7] spare storage
-        uint32[8] blueprint;
-
-        // The timestamp from the block when this part came into existence.
-        uint64 forgeTime;
-
-        // Keep track of how many battles this part has been engaged in within
-        // the last day
-        uint16 battlesLastDay;
+    // store token id on this? 
+     struct Part {
+        uint32 tokenId; 
+        uint8 partType;
+        uint8 partSubType;
+        uint8 rarity;
+        uint8 element;
+        uint32 battlesLastDay;
+        uint32 experience;
+        uint32 forgeTime; // TODO: check whether we need uint64
+        uint32 battlesLastReset;
     }
 
     // Store a user struct
@@ -68,12 +60,12 @@ contract EtherbotsBase is EtherbotsPrivileges {
 
     struct User {
         address userAddress;
-        uint32 userExperience;
+        uint32 experience;
         uint8[32] perks;
     }
 
     //Maintain an array of all users.
-    User[] users;
+    User[] public users;
 
     // Store a map of the address to a uint representing index of User within users
     // we check if a user exists at multiple points, every time they acquire
@@ -137,28 +129,23 @@ contract EtherbotsBase is EtherbotsPrivileges {
         Transfer(_from, _to, _tokenId);
     }
 
-    ///  An internal method that creates a new part and stores it. This
-    ///  method doesn't do any checking and should only be called when the
-    ///  input data is known to be valid. Will generate both a Forge event
-    ///  and a Transfer event.
-    function _createPart(uint32[8] _blueprint, address _owner) internal returns (uint) {
-        Part memory _part = Part({
-            blueprint: _blueprint,
-            forgeTime: uint64(now),
-            battlesLastDay: 0
-        });
-        uint256 newPartId = parts.push(_part) - 1;
+    // function _randomPartArray(uint _rand) internal returns (uint8[4] blueprint) {
 
-
-        // emit the FORGING!!!
-        Forge(_owner, newPartId, _part.blueprint);
-
-        // This will assign ownership, and also emit the Transfer event as
-        // per ERC721 draft
-        _transfer(0, _owner, newPartId);
-
-        return newPartId;
-    }
+    // }    
+    
+    function getPartById(uint _id) external view returns (
+       uint8 partType,
+       uint8 partSubType,
+        uint8 rarity,
+        uint8 element,
+        uint32 battlesLastDay,
+        uint32 experience,
+        uint32 forgeTime,
+        uint32 battlesLastReset
+    ) {
+        Part memory p = parts[_id];
+        return (p.partType, p.partSubType, p.rarity, p.element, p.battlesLastDay, p.experience, p.forgeTime, p.battlesLastReset);
+    } 
 
 
     // ELEMENT CONSTANTS
@@ -168,7 +155,7 @@ contract EtherbotsBase is EtherbotsPrivileges {
     string private MELEE_ELEMENT_BY_ID = "31323422111144";
     string private DEFENCE_ELEMENT_BY_ID = "43212113434";
 
-    function substring(string str, uint startIndex, uint endIndex) internal constant returns (string) {
+    function substring(string str, uint startIndex, uint endIndex) internal pure returns (string) {
       bytes memory strBytes = bytes(str);
       bytes memory result = new bytes(endIndex-startIndex);
       for(uint i = startIndex; i < endIndex; i++) {
@@ -177,7 +164,7 @@ contract EtherbotsBase is EtherbotsPrivileges {
       return string(result);
     }
   // helper functions adapted from  Jossie Calderon on stackexchange
-  function stringToUint32(string s) internal constant returns (uint32) {
+  function stringToUint32(string s) internal pure returns (uint32) {
       bytes memory b = bytes(s);
       uint result = 0;
       for (uint i = 0; i < b.length; i++) { // c = b[i] was not needed
@@ -187,8 +174,19 @@ contract EtherbotsBase is EtherbotsPrivileges {
       }
       return uint32(result); // this was missing
   }
+  
+  function stringToUint8(string s) internal pure returns (uint8) {
+      bytes memory b = bytes(s);
+      uint result = 0;
+      for (uint i = 0; i < b.length; i++) { // c = b[i] was not needed
+          if (b[i] >= 48 && b[i] <= 57) {
+              result = result * 10 + (uint(b[i]) - 48); // bytes and int are not compatible with the operator -.
+          }
+      }
+      return uint8(result); // this was missing
+  }
 
-  function uintToString(uint v) internal constant returns (string) {
+  function uintToString(uint v) internal pure returns (string) {
       uint maxlength = 100;
       bytes memory reversed = new bytes(maxlength);
       uint i = 0;
